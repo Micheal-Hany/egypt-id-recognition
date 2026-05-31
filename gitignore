@@ -1,0 +1,145 @@
+# ══════════════════════════════════════════════════════════════
+#  EgyptID — .gitignore
+#  Python · Streamlit · PyTorch · YOLO · OpenCV
+# ══════════════════════════════════════════════════════════════
+
+
+# ── Python ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ── Virtual environments ───────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+.venv.bak/
+
+# ── Distribution / packaging ───────────────────────────────────
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+MANIFEST
+
+# ── Unit tests / coverage ──────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+nosetests.xml
+
+# ── Type checkers ──────────────────────────────────────────────
+.mypy_cache/
+.pytype/
+.pyre/
+
+# ── Jupyter Notebooks ──────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── ML Models — large binary files (use Git LFS if needed) ────
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.pb
+*.onnx
+*.tflite
+*.bin
+*.safetensors
+
+# ── EasyOCR model cache ────────────────────────────────────────
+~/.EasyOCR/
+.EasyOCR/
+
+# ── YOLO / Ultralytics run artifacts ──────────────────────────
+runs/
+ultralytics_runs/
+
+# ── OpenCV / image debug outputs ──────────────────────────────
+debug_card_crop.jpg
+debug_variant_*.jpg
+debug_variant_*.png
+*.debug.jpg
+*.debug.png
+
+# ── Streamlit ──────────────────────────────────────────────────
+.streamlit/secrets.toml
+
+# ── Environment variables ──────────────────────────────────────
+.env
+.env.*
+*.env
+!.env.example
+
+# ── OS generated ───────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── IDEs ───────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.code-workspace
+
+# ── Logs ───────────────────────────────────────────────────────
+*.log
+logs/
+*.out
+
+# ── Temporary files ────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.cache/
+tmp/
+temp/
+
+# ── Data — do not commit real ID images ────────────────────────
+data/
+datasets/
+images/
+samples/
+test_images/
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.webp
+# Exceptions: keep placeholder/example assets if any
+# !assets/placeholder.png
+
+# ── Secrets & credentials ──────────────────────────────────────
+secrets.toml
+*.pem
+*.key
+*.cert
+credentials.json
+service_account.json
