@@ -478,17 +478,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Import utils ───────────────────────────────────────────────────────────────
-from utils import (
-    decode_national_id,
-    run_full_pipeline,
-    preprocess_image,
-    run_ocr,
-    extract_national_id_from_text,
-    find_card_corners,
-    perspective_warp,
-    normalize_digits,
-)
+# ── Import core modules ────────────────────────────────────────────────────────
+from core.nid_decoder import decode_national_id, extract_national_id_from_text
+from pipeline.full_pipeline import run_full_pipeline
+from core.image_processing import preprocess_image, find_card_corners, perspective_warp
+from utils.helpers import normalize_digits
 
 # ── Topbar ─────────────────────────────────────────────────────────────────────
 st.markdown("""
