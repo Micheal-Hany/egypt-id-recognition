@@ -5,11 +5,13 @@
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![YOLO](https://img.shields.io/badge/YOLOv8-Ultralytics-00BFFF?style=flat-square)
 ![EasyOCR](https://img.shields.io/badge/EasyOCR-AR%20%2B%20EN-orange?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-A production-grade pipeline for detecting, extracting, and decoding Egyptian National ID cards from images — combining YOLO object detection, multi-strategy EasyOCR, and a rule-based NID decoder.
+A production-grade pipeline for detecting, extracting, and decoding Egyptian National ID cards from images — combining YOLO object detection, multi-strategy EasyOCR, and a rule-based NID decoder.  
+Comes with both a **Streamlit UI** and a **FastAPI REST API** for backend integration.
 
 </div>
 
@@ -24,6 +26,7 @@ A production-grade pipeline for detecting, extracting, and decoding Egyptian Nat
 - **Full NID decoder** — birth date, governorate, gender, sequence number, and checksum
 - **Manual decoder tab** for direct 14-digit input with live visual breakdown
 - **Dark production UI** with real-time pipeline progress, confidence bars, and processing stage previews
+- **REST API** (FastAPI) — upload an image or send base64, receive structured JSON with all decoded fields
 
 ---
 
@@ -50,11 +53,16 @@ source .venv/bin/activate          # Linux/Mac
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Launch the app
+# 4a. Launch the Streamlit UI
 streamlit run APP.py
+
+# 4b. OR launch the REST API
+python api.py
 ```
 
-Open your browser at **http://localhost:8501**
+- Streamlit UI → **http://localhost:8501**
+- REST API → **http://localhost:8000**
+- Swagger docs → **http://localhost:8000/docs**
 
 ### One-line scripts
 
@@ -73,11 +81,22 @@ run.bat
 ```
 egypt-id-recognition/
 ├── APP.py                  # Streamlit application (UI layer)
-├── utils.py                # Core pipeline: YOLO · OCR · Decoder
+├── api.py                  # FastAPI REST API
+├── full_pipeline.py        # Core pipeline orchestration
+├── config.py               # Constants and configuration
 ├── debug_ocr.py            # Step-by-step OCR diagnostic tool
 ├── requirements.txt        # Python dependencies
 ├── run.sh                  # Launch script (Linux/macOS)
 ├── run.bat                 # Launch script (Windows)
+│
+├── core/
+│   ├── models.py           # YOLO model loading
+│   ├── image_processing.py # Preprocessing variants & perspective warp
+│   ├── ocr_engine.py       # EasyOCR engine & RTL sorting
+│   └── nid_decoder.py      # NID extraction & decoding
+│
+├── utils/
+│   └── helpers.py          # Digit normalization utilities
 │
 ├── detect_id_card.pt       # ← Place your YOLO card-detection model here
 ├── detect_id.pt            # ← Place your YOLO field-detection model here
@@ -88,17 +107,187 @@ egypt-id-recognition/
 
 ---
 
-## 🤖 YOLO Models
+## 🌐 REST API
 
-Place trained `.pt` files in the project root directory:
+The `api.py` file exposes the full pipeline as a FastAPI service — no UI needed. Ideal for mobile apps, backend services, or any system that needs to process ID cards programmatically.
 
-| File | Purpose | Required |
-|------|---------|----------|
-| `detect_id_card.pt` | Detects and crops the ID card from a scene image | Recommended |
-| `detect_id.pt` | Detects individual text fields within the cropped card | Optional |
-| `detect_odjects.pt` | General object detection | Optional |
+### Start the API server
 
-You can supply custom model paths at runtime via the sidebar settings.
+```bash
+# Install extra deps (if not already installed)
+pip install fastapi uvicorn[standard] python-multipart
+
+python api.py
+# → http://localhost:8000
+# → http://localhost:8000/docs  (interactive Swagger UI)
+```
+
+---
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/` | Health check & endpoint map |
+| `GET`  | `/health` | Dependency version check |
+| `POST` | `/scan` | Upload image file → full pipeline → JSON |
+| `POST` | `/scan/base64` | Same but image as base64 in JSON body |
+| `POST` | `/decode` | Decode a known 14-digit NID string (no OCR) |
+| `GET`  | `/decode/{nid}` | Same via URL path |
+
+---
+
+### POST `/scan` — Upload an image
+
+```bash
+curl -X POST http://localhost:8000/scan \
+  -F "file=@id_card.jpg"
+```
+
+**Full JSON response:**
+
+```json
+{
+  "success": true,
+  "processing_time_ms": 1842.3,
+
+  "national_id": "29901011234567",
+
+  "ocr_text_count": 18,
+  "ocr_tokens": [
+    { "text": "محمد أحمد علي",   "confidence": 0.923, "confidence_pct": 92 },
+    { "text": "29901011234567",   "confidence": 0.871, "confidence_pct": 87 },
+    { "text": "القاهرة",          "confidence": 0.654, "confidence_pct": 65 }
+  ],
+  "all_extracted_digits": "2990101123456701011234567",
+
+  "decoded": {
+    "valid": true,
+    "national_id":  "29901011234567",
+
+    "birth_date":   "01/01/1999",
+    "birth_year":   "1999",
+    "birth_month":  "01",
+    "birth_day":    "01",
+
+    "gender":       "ذكر",
+    "gender_en":    "male",
+
+    "governorate":       "القاهرة",
+    "governorate_code":  "01",
+
+    "century":       "١٩٠٠",
+    "sequence":      "1234",
+    "checksum_digit": "7",
+
+    "segments": {
+      "century_digit":    "2",
+      "century_label":    "١٩٠٠",
+      "year_2digit":      "99",
+      "month":            "01",
+      "day":              "01",
+      "governorate_code": "01",
+      "sequence":         "1234",
+      "checksum_digit":   "7"
+    },
+
+    "error": null
+  },
+
+  "error": null
+}
+```
+
+> `ocr_tokens` contains **all raw text** detected on the card (names, address, etc.) with per-token confidence scores.
+
+---
+
+### POST `/scan/base64` — Base64 image (mobile-friendly)
+
+```bash
+curl -X POST http://localhost:8000/scan/base64 \
+  -H "Content-Type: application/json" \
+  -d '{"image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."}'
+```
+
+Same response shape as `/scan`.
+
+---
+
+### POST `/decode` — Decode NID without OCR
+
+```bash
+curl -X POST http://localhost:8000/decode \
+  -H "Content-Type: application/json" \
+  -d '{"national_id": "29901011234567"}'
+```
+
+### GET `/decode/{nid}` — Decode via URL
+
+```bash
+curl http://localhost:8000/decode/29901011234567
+```
+
+**Response (both decode endpoints):**
+
+```json
+{
+  "valid":        true,
+  "national_id":  "29901011234567",
+  "birth_date":   "01/01/1999",
+  "birth_year":   "1999",
+  "birth_month":  "01",
+  "birth_day":    "01",
+  "gender":       "ذكر",
+  "gender_en":    "male",
+  "governorate":  "القاهرة",
+  "governorate_code": "01",
+  "century":      "١٩٠٠",
+  "sequence":     "1234",
+  "checksum_digit": "7",
+  "segments": { ... },
+  "error": null
+}
+```
+
+---
+
+### Flutter / Dart example
+
+```dart
+// Upload image file
+final request = http.MultipartRequest(
+  'POST',
+  Uri.parse('http://YOUR_SERVER_IP:8000/scan'),
+);
+request.files.add(await http.MultipartFile.fromPath('file', imagePath));
+final streamedResponse = await request.send();
+final body = jsonDecode(await streamedResponse.stream.bytesToString());
+
+final nid       = body['national_id'];
+final decoded   = body['decoded'];
+final gender    = decoded['gender'];        // ذكر / أنثى
+final genderEn  = decoded['gender_en'];     // male / female
+final gov       = decoded['governorate'];   // القاهرة
+final birthDate = decoded['birth_date'];    // 01/01/1999
+final birthYear = decoded['birth_year'];    // 1999
+final century   = decoded['century'];       // ١٩٠٠ or ٢٠٠٠
+final ocrTexts  = (body['ocr_tokens'] as List)
+                    .map((t) => t['text'] as String)
+                    .toList();              // raw card text (names, etc.)
+```
+
+---
+
+### Production deployment notes
+
+```bash
+# Single worker is important — EasyOCR reader is a global singleton
+gunicorn -w 1 -k uvicorn.workers.UvicornWorker api:app --bind 0.0.0.0:8000
+```
+
+- Replace `allow_origins=["*"]` in `api.py` with your actual domain before going live.
+- The YOLO `.pt` model files must be present at the paths passed as query parameters (default: same directory as `api.py`).
 
 ---
 
@@ -165,6 +354,9 @@ This runs the full preprocessing and OCR chain, saves variant images (`debug_var
 | Package | Version | Purpose |
 |---------|---------|---------|
 | `streamlit` | ≥1.28 | Web UI |
+| `fastapi` | ≥0.111 | REST API framework |
+| `uvicorn[standard]` | ≥0.29 | ASGI server |
+| `python-multipart` | ≥0.0.9 | File upload support for FastAPI |
 | `ultralytics` | ≥8.0 | YOLOv8 inference |
 | `easyocr` | ≥1.7 | Arabic + English OCR |
 | `opencv-python-headless` | ≥4.8 | Image processing |
@@ -181,21 +373,21 @@ pip install -r requirements.txt
 
 ## ⚙️ Configuration
 
-All runtime settings are available in the sidebar:
+All runtime settings are available in the sidebar (Streamlit UI) or as query parameters (API):
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Card model path | `detect_id_card.pt` | Path to YOLO card detection model |
 | Field model path | `detect_id.pt` | Path to YOLO field detection model |
 | Perspective correction | `on` | Apply warpPerspective after detection |
-| Show processing stages | `on` | Display intermediate pipeline images |
+| Show processing stages | `on` | Display intermediate pipeline images (UI only) |
 | OCR confidence threshold | `0.30` | Minimum confidence to show OCR results |
 
 ---
 
 ## 🔒 Privacy Notice
 
-This application processes images locally. No data is sent to external servers. Images are held in memory only for the duration of a single session and are not persisted to disk.
+This application processes images locally. No data is sent to external servers. Images are held in memory only for the duration of a single request and are not persisted to disk.
 
 ---
 
@@ -206,5 +398,5 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 <div align="center">
-  Built with Streamlit · YOLO v8 · EasyOCR · OpenCV
-</div>s
+  Built with Streamlit · FastAPI · YOLO v8 · EasyOCR · OpenCV
+</div>
